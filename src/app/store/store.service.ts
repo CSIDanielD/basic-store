@@ -19,6 +19,10 @@ export class StoreService {
         return this.store.actions;
     }
 
+    get latestAction$() {
+        return this.store.latestAction$;
+    }
+
     /**
      * Select all or a part of the current state value synchronously.
      * @param selector The selector that will be called with the current state value.
