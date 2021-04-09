@@ -6,7 +6,7 @@ import { createProviderFrom } from '../basic-store/actionProvider';
 })
 export class ActionProviderService {
 
-  provider = createProviderFrom({}).provider;;
+  provider = createProviderFrom({}).provider;
 
   constructor() { }
 }
