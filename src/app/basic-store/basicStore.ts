@@ -16,24 +16,19 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
   >;
   protected _dispatcher = new Subject<Action<any>>();
 
+  protected _actionCreators: Readonly<
+    InferActionCreatorMapFromActionReducerMap<
+      InferActionReducerMapFromReducerMap<R>
+    >
+  >;
+
   /**
    * A convenience object containing every action key mapped to its action creator.
    * @use Use the object destructuring syntax to extract whichever registered action(s) you
    * need like this: `const { actionA, actionB } = store.actions;`
    */
   get actions() {
-    const actionCreators = Object.entries(this._actionReducers.value).reduce(
-      (map, entry) => {
-        const [actionType, actionReducer] = entry;
-        map[actionType] = actionReducer.actionCreator;
-        return map;
-      },
-      {} as { [actionType: string]: any }
-    );
-
-    return actionCreators as InferActionCreatorMapFromActionReducerMap<
-      InferActionReducerMapFromReducerMap<R>
-    >;
+    return this._actionCreators;
   }
 
   /**
@@ -81,11 +76,30 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
     this._state.next(await evaluatedState);
   }
 
+  protected _buildActionCreatorMap() {
+    const actionCreators = Object.entries(this._actionReducers.value).reduce(
+      (map, entry) => {
+        const [actionType, actionReducer] = entry;
+        map[actionType] = actionReducer.actionCreator;
+        return map;
+      },
+      {} as { [actionType: string]: any }
+    );
+
+    return actionCreators as InferActionCreatorMapFromActionReducerMap<
+      InferActionReducerMapFromReducerMap<R>
+    >;
+  }
+
   constructor(initialState: S, reducers: R) {
     this._state = new BehaviorSubject(initialState);
+
     this._actionReducers = new BehaviorSubject(
       new ActionContext<S>().createActionReducerMap(reducers)
     );
+
+    // Memoize the action creator map
+    this._actionCreators = this._buildActionCreatorMap();
 
     // Automatically commit actions to mutate the state
     this._dispatcher.subscribe(action => this._commitAction(action));
