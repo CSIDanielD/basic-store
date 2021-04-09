@@ -1,15 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { StoreService } from 'src/app/store/store.service';
 
 @Component({
   selector: 'app-user-list',
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss']
 })
-export class UserListComponent implements OnInit {
+export class UserListComponent {
+  constructor(private store: StoreService) { }
 
-  constructor() { }
-
-  ngOnInit(): void {
+  get users$() {
+    return this.store.selectAsync(s => s.users);
   }
-
 }

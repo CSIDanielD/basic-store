@@ -1,15 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
+import { StoreService } from 'src/app/store/store.service';
 
 @Component({
   selector: 'app-note-list',
   templateUrl: './note-list.component.html',
   styleUrls: ['./note-list.component.scss']
 })
-export class NoteListComponent implements OnInit {
+export class NoteListComponent {
+  constructor(private store: StoreService) { }
 
-  constructor() { }
-
-  ngOnInit(): void {
+  get notes$() {
+    return this.store.selectAsync(s => s.notes);
   }
-
 }
