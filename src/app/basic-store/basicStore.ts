@@ -36,6 +36,10 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
     return this._actionCreators.value;
   }
 
+  get latestAction$() {
+    return this._dispatcher.asObservable();
+  }
+
   /**
    * Select all or a part of the current state value synchronously.
    * @param selector The selector that will be called with the current state value.
