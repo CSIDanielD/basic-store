@@ -1,18 +1,14 @@
-// export type Reducer<S, P> = IsNonUndefined<
-//   P,
-//   IsUnknown<P, ReducerWithoutPayload<S>, ReducerWithPayload<S, P>>,
-//   ReducerWithoutPayload<S> // If reducer has an unknown or undefined payload, it's a ReducerWithoutPayload
-// >;
+import { Draft } from "immer";
 
 export type Reducer<S, P> = ReducerWithPayload<S, P> | ReducerWithoutPayload<S>;
 
 export type ReducerWithPayload<S, P> =
-  | ((getState: () => S, payload: P) => S)
-  | ((getState: () => S, payload: P) => Promise<S>);
+  | ((getState: () => Draft<S>, payload: P) => Draft<S>)
+  | ((getState: () => Draft<S>, payload: P) => Promise<Draft<S>>);
 
 export type ReducerWithoutPayload<S> =
-  | ((getState: () => S) => S)
-  | ((getState: () => S) => Promise<S>);
+  | ((getState: () => Draft<S>) => Draft<S>)
+  | ((getState: () => Draft<S>) => Promise<Draft<S>>);
 
 export type ReducerMap<S = any, P = any> = {
   [actionType: string]: Reducer<S, P>;

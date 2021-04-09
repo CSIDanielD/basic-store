@@ -1,3 +1,4 @@
+import { castImmutable, createDraft, Draft, finishDraft, Immutable } from "immer";
 import { BehaviorSubject, Subject } from "rxjs";
 import { map } from "rxjs/operators";
 import { Action } from "./action";
@@ -10,17 +11,21 @@ import {
 } from "./utilityTypes";
 
 export class BasicStore<S, R extends ReducerMap<S, any>> {
-  protected _state: BehaviorSubject<S>;
-  protected _actionReducers: BehaviorSubject<
-    InferActionReducerMapFromReducerMap<R>
-  >;
-  protected _dispatcher = new Subject<Action<any>>();
+  protected _state: BehaviorSubject<Immutable<S>>;
 
-  protected _actionCreators: Readonly<
-    InferActionCreatorMapFromActionReducerMap<
-      InferActionReducerMapFromReducerMap<R>
+  protected _actionReducers: BehaviorSubject<
+    Immutable<InferActionReducerMapFromReducerMap<R>>
+  >;
+
+  protected _actionCreators: BehaviorSubject<
+    Immutable<
+      InferActionCreatorMapFromActionReducerMap<
+        InferActionReducerMapFromReducerMap<R>
+      >
     >
   >;
+
+  protected _dispatcher = new Subject<Action<any>>();
 
   /**
    * A convenience object containing every action key mapped to its action creator.
@@ -28,15 +33,15 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
    * need like this: `const { actionA, actionB } = store.actions;`
    */
   get actions() {
-    return this._actionCreators;
+    return this._actionCreators.value;
   }
 
   /**
    * Select all or a part of the current state value synchronously.
    * @param selector The selector that will be called with the current state value.
    */
-  select<T>(selector: Selector<S, T>) {
-    return selector({ ...this._state.value });
+  select<T>(selector: Selector<Immutable<S>, T>) {
+    return selector(this._state.value);
   }
 
   /**
@@ -44,7 +49,7 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
    * selected state in a display component or async logic.
    * @param selector The selector that will be supplied to the RxJs `map` operator.
    */
-  selectAsync<T>(selector: Selector<S, T>) {
+  selectAsync<T>(selector: Selector<Immutable<S>, T>) {
     return this._state.asObservable().pipe(map(selector));
   }
 
@@ -68,12 +73,13 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
   protected async _commitAction<A extends Action<any>>(action: A) {
     const { reducer } = this._actionReducers.value[action.type];
 
-    const stateFn = () => this.select(s => s);
-    const evaluatedState = new Promise<S>((resolve, reject) => {
+    const stateFn = () => createDraft(this._state.value as S);
+    const reducerPromise = new Promise<Draft<S>>((resolve, reject) => {
       return resolve(reducer(stateFn, action.payload));
     });
 
-    this._state.next(await evaluatedState);
+    const newState = finishDraft(await reducerPromise) as S;
+    this._state.next(castImmutable(newState));
   }
 
   protected _buildActionCreatorMap() {
@@ -86,20 +92,27 @@ export class BasicStore<S, R extends ReducerMap<S, any>> {
       {} as { [actionType: string]: any }
     );
 
-    return actionCreators as InferActionCreatorMapFromActionReducerMap<
-      InferActionReducerMapFromReducerMap<R>
+    return actionCreators as Immutable<
+      InferActionCreatorMapFromActionReducerMap<
+        InferActionReducerMapFromReducerMap<R>
+      >
     >;
   }
 
   constructor(initialState: S, reducers: R) {
-    this._state = new BehaviorSubject(initialState);
+    this._state = new BehaviorSubject(castImmutable(initialState));
 
     this._actionReducers = new BehaviorSubject(
-      new ActionContext<S>().createActionReducerMap(reducers)
+      castImmutable(new ActionContext<S>().createActionReducerMap(reducers))
     );
 
     // Memoize the action creator map
-    this._actionCreators = this._buildActionCreatorMap();
+    this._actionCreators = new BehaviorSubject(this._buildActionCreatorMap());
+
+    // Automatically update the memoized actionCreators in the extremely unlikely event that it updates during runtime.
+    this._actionReducers.subscribe(() => {
+      this._actionCreators.next(this._buildActionCreatorMap());
+    });
 
     // Automatically commit actions to mutate the state
     this._dispatcher.subscribe(action => this._commitAction(action));
