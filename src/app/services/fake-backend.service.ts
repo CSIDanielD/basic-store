@@ -38,52 +38,52 @@ export class FakeBackendService {
   /** Public backend faux-API */
 
   // Demonstrate returning different types of state in one call.
-  getUsersAndTasks() {
+  getUsersAndTasks(waitMs?: number) {
     return this.toDelayedSingleEmitter(
       this.selectAsync(s => {
         return { users: s.users, tasks: s.tasks };
-      })
+      }), waitMs
     );
   }
 
-  addUser(user: User) {
-    return this.addValue(s => s.users, "userId", user);
+  addUser(user: User, waitMs?: number) {
+    return this.addValue(s => s.users, "userId", user, waitMs);
   }
 
-  updateUser(userId: number, user: User) {
-    return this.updateValue(s => s.users, s => s.userId === userId, user);
+  updateUser(userId: number, user: User, waitMs?: number) {
+    return this.updateValue(s => s.users, s => s.userId === userId, user, waitMs);
   }
 
-  removeUser(userId: number) {
-    return this.removeValue(s => s.users, s => s.userId === userId);
+  removeUser(userId: number, waitMs?: number) {
+    return this.removeValue(s => s.users, s => s.userId === userId, waitMs);
   }
 
-  addTask(task: UserTask) {
-    return this.addValue(s => s.tasks, "taskId", task);
+  addTask(task: UserTask, waitMs?: number) {
+    return this.addValue(s => s.tasks, "taskId", task, waitMs);
   }
 
-  updateTask(taskId: number, task: UserTask) {
-    return this.updateValue(s => s.tasks, s => s.taskId === taskId, task);
+  updateTask(taskId: number, task: UserTask, waitMs?: number) {
+    return this.updateValue(s => s.tasks, s => s.taskId === taskId, task, waitMs);
   }
 
-  removeTask(taskId: number) {
-    return this.removeValue(s => s.tasks, s => s.taskId === taskId);
+  removeTask(taskId: number, waitMs?: number) {
+    return this.removeValue(s => s.tasks, s => s.taskId === taskId, waitMs);
   }
 
-  getNotes() {
-    return this.toDelayedSingleEmitter(this.selectAsync(s => s.notes));
+  getNotes(waitMs?: number) {
+    return this.toDelayedSingleEmitter(this.selectAsync(s => s.notes), waitMs);
   }
 
-  addNote(note: Note) {
-    return this.addValue(s => s.notes, "noteId", note);
+  addNote(note: Note, waitMs?: number) {
+    return this.addValue(s => s.notes, "noteId", note, waitMs);
   }
 
-  updateNote(noteId: number, note: Note) {
-    return this.updateValue(s => s.notes, s => s.noteId === noteId, note);
+  updateNote(noteId: number, note: Note, waitMs?: number) {
+    return this.updateValue(s => s.notes, s => s.noteId === noteId, note, waitMs);
   }
 
-  removeNote(noteId: number) {
-    return this.removeValue(s => s.notes, s => s.noteId === noteId);
+  removeNote(noteId: number, waitMs?: number) {
+    return this.removeValue(s => s.notes, s => s.noteId === noteId, waitMs);
   }
 
   /** Private helper methods */
@@ -95,10 +95,11 @@ export class FakeBackendService {
     return this._nextId.value;
   }
 
-  private toDelayedSingleEmitter<T>(obs: Observable<T>) {
+  private toDelayedSingleEmitter<T>(obs: Observable<T>, waitMs?: number) {
+    const waitTime = waitMs ? waitMs : this.globalDelay;
     return obs
       .pipe(take(1)) // Only emit 1 value (similar to http.get)
-      .pipe(delay(this.globalDelay)); // artifically delay the time until the value is emitted
+      .pipe(delay(waitTime)); // artifically delay the time until the value is emitted
   }
 
   private assignNewId<T extends AppStateTypes>(value: T, idKey: IdKeys) {
@@ -114,6 +115,8 @@ export class FakeBackendService {
       case "noteId":
         (newValue as Note).noteId = this.nextId();
         break;
+      default:
+        console.log('No id was found?', idKey);
     }
 
     return newValue;
@@ -130,22 +133,25 @@ export class FakeBackendService {
   private addValue<T extends AppStateTypes>(
     stateSelector: (s: Draft<AppState>) => T[],
     idKey: IdKeys,
-    value: T
+    value: T,
+    waitMs?: number
   ) {
+    const newValue = this.assignNewId(value, idKey);
+
     const newData = produce(this.select(s => s), draft => {
-      const newValue = this.assignNewId(value, idKey);
       stateSelector(draft).push(newValue);
     });
 
     this._fakeDatabase.next(newData);
 
-    return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
+    return this.toDelayedSingleEmitter(scheduled([newValue], asapScheduler), waitMs);
   }
 
   private updateValue<T extends AppStateTypes>(
     stateSelector: (s: Draft<AppState>) => T[],
     predicate: (value: T, index?: number) => boolean,
-    value: T
+    value: T,
+    waitMs?: number
   ) {
     const newData = produce(this.select(s => s), draft => {
       const selected = stateSelector(draft);
@@ -155,12 +161,13 @@ export class FakeBackendService {
 
     this._fakeDatabase.next(newData);
 
-    return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
+    return this.toDelayedSingleEmitter(scheduled([true], asapScheduler), waitMs);
   }
 
   private removeValue<T>(
     stateSelector: (s: Draft<AppState>) => T[],
-    predicate: (value: T, index?: number) => boolean
+    predicate: (value: T, index?: number) => boolean,
+    waitMs?: number
   ) {
     const newData = produce(this.select(s => s), draft => {
       const selected = stateSelector(draft);
@@ -170,6 +177,6 @@ export class FakeBackendService {
 
     this._fakeDatabase.next(newData);
 
-    return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
+    return this.toDelayedSingleEmitter(scheduled([true], asapScheduler), waitMs);
   }
 }

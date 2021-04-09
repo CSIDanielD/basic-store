@@ -35,7 +35,7 @@ export class UserService {
     const state = getState();
 
     if (result) {
-      state.users.push(user);
+      state.users.push(result);
     }
 
     return state;
