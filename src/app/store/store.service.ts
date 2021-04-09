@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { BasicStore } from "../basic-store/basicStore";
-import { defaultState } from "../state/defaultState";
+import { defaultState } from "./defaultState";
 import { ActionProviderService } from "./action-provider.service";
 
 @Injectable({ providedIn: "root" })
