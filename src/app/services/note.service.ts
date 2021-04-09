@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { castDraft } from 'immer';
 import { withState } from '../basic-store/actionContext';
 import { AppState } from '../types/appState';
 import { Note } from '../types/note';
@@ -19,7 +20,7 @@ export class NoteService {
 
     // Get the current state after awaiting
     const state = getState();
-    state.notes = notes;
+    state.notes = castDraft(notes);
     return state;
   });
 

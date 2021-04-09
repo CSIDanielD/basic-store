@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { castDraft } from 'immer';
 import { withState } from '../basic-store/actionContext';
 import { AppState } from '../types/appState';
 import { User } from '../types/user';
@@ -20,8 +21,8 @@ export class UserService {
     // Get the current state after awaiting
     const state = getState();
 
-    state.users = usersAndTasks.users;
-    state.tasks = usersAndTasks.tasks;
+    state.users = castDraft(usersAndTasks.users);
+    state.tasks = castDraft(usersAndTasks.tasks);
 
     return state;
   });

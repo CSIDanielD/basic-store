@@ -1,4 +1,5 @@
 import { Injectable } from "@angular/core";
+import produce, { Draft, Immutable } from "immer";
 import { asapScheduler, BehaviorSubject, Observable, scheduled } from "rxjs";
 import { delay, map, take } from "rxjs/operators";
 import { AppState } from "../types/appState";
@@ -13,7 +14,7 @@ type IdKeys = "userId" | "taskId" | "noteId";
 export class FakeBackendService {
   private globalDelay = 500;
 
-  private _fakeDatabase = new BehaviorSubject<AppState>({
+  private _fakeDatabase = new BehaviorSubject<Immutable<AppState>>({
     users: [
       {
         userId: 4,
@@ -118,60 +119,55 @@ export class FakeBackendService {
     return newValue;
   }
 
-  private select<T>(selector: (s: AppState) => T) {
+  private select<T>(selector: (s: Immutable<AppState>) => T) {
     return selector(this._fakeDatabase.value);
   }
 
-  private selectAsync<T>(selector: (s: AppState, index?: number) => T) {
+  private selectAsync<T>(selector: (s: Immutable<AppState>, index?: number) => T) {
     return this._fakeDatabase.asObservable().pipe(map(selector));
   }
 
   private addValue<T extends AppStateTypes>(
-    stateSelector: (s: AppState) => T[],
+    stateSelector: (s: Draft<AppState>) => T[],
     idKey: IdKeys,
     value: T
   ) {
-    const newData = { ...this.select(s => s) };
-    const newValue = this.assignNewId(value, idKey);
+    const newData = produce(this.select(s => s), draft => {
+      const newValue = this.assignNewId(value, idKey);
+      stateSelector(draft).push(newValue);
+    });
 
-    [...stateSelector(newData)].push(newValue);
     this._fakeDatabase.next(newData);
 
     return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
   }
 
   private updateValue<T extends AppStateTypes>(
-    stateSelector: (s: AppState) => T[],
+    stateSelector: (s: Draft<AppState>) => T[],
     predicate: (value: T, index?: number) => boolean,
     value: T
   ) {
-    const newData = { ...this.select(s => s) };
-    const selectedState = stateSelector(newData);
-    const valueIndex = selectedState.findIndex(predicate);
+    const newData = produce(this.select(s => s), draft => {
+      const selected = stateSelector(draft);
+      const index = selected.findIndex(predicate);
+      selected[index] = value;
+    });
 
-    if (!selectedState || valueIndex < 0) {
-      return this.toDelayedSingleEmitter(scheduled([false], asapScheduler));
-    }
-
-    selectedState[valueIndex] = value;
     this._fakeDatabase.next(newData);
 
     return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
   }
 
   private removeValue<T>(
-    stateSelector: (s: AppState) => T[],
+    stateSelector: (s: Draft<AppState>) => T[],
     predicate: (value: T, index?: number) => boolean
   ) {
-    const newData = { ...this.select(s => s) };
-    const selectedState = stateSelector(newData);
-    const valueIndex = selectedState.findIndex(predicate);
+    const newData = produce(this.select(s => s), draft => {
+      const selected = stateSelector(draft);
+      const index = selected.findIndex(predicate);
+      selected.splice(index, 1);
+    });
 
-    if (!selectedState || valueIndex < 0) {
-      return this.toDelayedSingleEmitter(scheduled([false], asapScheduler));
-    }
-
-    selectedState.splice(valueIndex, 1);
     this._fakeDatabase.next(newData);
 
     return this.toDelayedSingleEmitter(scheduled([true], asapScheduler));
