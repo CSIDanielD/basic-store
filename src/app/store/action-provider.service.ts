@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createProviderFrom } from '../basic-store/actionProvider';
 import { NoteService } from '../services/note.service';
+import { StateUtilityService } from '../services/state-utility.service';
 import { TaskService } from '../services/task.service';
 import { UserService } from '../services/user.service';
 
@@ -20,13 +21,14 @@ export class ActionProviderService {
  * */
   private _mergedActionProviders = createProviderFrom({ ...this.userService })
     .mergeProvider({ ...this.taskService })
-    .mergeProvider({ ...this.noteService });
-
+    .mergeProvider({ ...this.noteService })
+    .mergeProvider({ ...this.stateUtilityService });
 
   provider = this._mergedActionProviders.provider;
 
   constructor(
     private userService: UserService,
     private taskService: TaskService,
-    private noteService: NoteService) { }
+    private noteService: NoteService,
+    private stateUtilityService: StateUtilityService) { }
 }
