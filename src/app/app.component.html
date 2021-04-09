@@ -8,17 +8,28 @@
 
   <div class="clearfix">
     <div class="float-right">
-      <button class="btn btn-secondary mr-1">
+      <button class="btn btn-secondary mr-1" (click)="resetState()">
+        Reset State
+      </button>
+      <button class="btn btn-secondary mr-1" (click)="addUsers()">
         Add Users
       </button>
       <button class="btn btn-primary mr-1" (click)="fetchNotes()">
         Fetch Notes
       </button>
       <button class="btn btn-primary mr-1" (click)="fetchUsers()">
-        Fetch Users
+        Fetch Users and Tasks
       </button>
     </div>
   </div>
 
   <div>Update count: {{stateUpdates$ | async}}</div>
+  <div class="mt-2">
+    Latest actions:
+    <ul>
+      <li *ngFor="let action of (lastFiveActions$ | async)">
+        {{action}}
+      </li>
+    </ul>
+  </div>
 </div>

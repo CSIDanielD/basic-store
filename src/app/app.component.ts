@@ -15,9 +15,30 @@ export class AppComponent {
         console.log('State updated:', s);
         this.stateUpdates$.next(this.stateUpdates$.value + 1)
       });
+
+    store.latestAction$.subscribe(a => {
+      const nextActions = [...this.lastFiveActions$.value];
+
+      if (nextActions.unshift(a.type) > 5) {
+        nextActions.pop();  // Remove the first (earliest) action
+      }
+
+      this.lastFiveActions$.next(nextActions);
+    });
   }
 
   stateUpdates$ = new BehaviorSubject(0);
+  lastFiveActions$ = new BehaviorSubject<string[]>([]);
+
+  resetState() {
+    const { resetState } = this.store.actions;
+    this.store.dispatch(resetState());
+  }
+
+  addUsers() {
+    const { addUserAsync } = this.store.actions;
+    this.store.dispatch(addUserAsync({ userId: 44, userName: "Bill" }));
+  }
 
   fetchUsers() {
     const { getUsersAndTasksAsync } = this.store.actions;
